@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  app:
+    image: ghcr.io/isak-ialogics/uss-paperclip:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: "USS Paperclip Dashboard"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: "${APP_URL:-http://localhost}"
+      APP_KEY: "${APP_KEY}"
+      LOG_CHANNEL: stderr
+      CACHE_DRIVER: file
+      SESSION_DRIVER: file
+      # Paperclip API connection
+      PAPERCLIP_API_URL: "${PAPERCLIP_API_URL}"
+      PAPERCLIP_API_KEY: "${PAPERCLIP_API_KEY}"
+      PAPERCLIP_COMPANY_ID: "${PAPERCLIP_COMPANY_ID}"
+    volumes:
+      - storage_data:/var/www/html/storage
+    ports:
+      - target: 80
+        published: ${DASHBOARD_PORT:-8088}
+        protocol: tcp
+        mode: host
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  storage_data:
+    driver: local
