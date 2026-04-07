@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>USS PAPERCLIP — LCARS Interface</title>
 <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
@@ -200,58 +201,11 @@
     z-index: 10;
   }
 
-  .starfield {
+  .viewscreen canvas {
     position: absolute;
     inset: 0;
-  }
-
-  .star {
-    position: absolute;
-    background: #fff;
-    border-radius: 50%;
-    animation: twinkle var(--dur) ease-in-out infinite alternate;
-  }
-
-  @keyframes twinkle {
-    0% { opacity: 0.2; transform: scale(0.8); }
-    100% { opacity: 1; transform: scale(1.2); }
-  }
-
-  @keyframes warpStreaks {
-    0% { transform: translateX(0); opacity: 0; }
-    10% { opacity: 1; }
-    100% { transform: translateX(400px); opacity: 0; }
-  }
-
-  .warp-streak {
-    position: absolute;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--lcars-lightblue), transparent);
-    animation: warpStreaks var(--dur) linear infinite;
-    opacity: 0;
-  }
-
-  .ship-container {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 5;
-  }
-
-  .ship-svg {
-    width: 280px;
-    height: 200px;
-    filter: drop-shadow(0 0 20px rgba(153, 204, 255, 0.4));
-  }
-
-  .ship-glow {
-    animation: engineGlow 2s ease-in-out infinite alternate;
-  }
-
-  @keyframes engineGlow {
-    0% { filter: drop-shadow(0 0 8px rgba(102, 136, 204, 0.6)); }
-    100% { filter: drop-shadow(0 0 24px rgba(153, 204, 255, 0.9)); }
+    width: 100% !important;
+    height: 100% !important;
   }
 
   .viewscreen-stats {
@@ -604,7 +558,6 @@
     .lcars-main { grid-template-columns: 1fr; }
     .crew-grid { grid-template-columns: 1fr; }
     .viewscreen { height: 220px; }
-    .ship-svg { width: 180px; height: 130px; }
   }
 
   .no-alerts {
@@ -653,45 +606,13 @@
   <div class="lcars-main">
 
     <!-- VIEWSCREEN -->
-    <div class="viewscreen">
+    <div class="viewscreen" id="viewscreen-container">
       <div class="viewscreen-label">MAIN VIEWSCREEN — FORWARD</div>
-      <div class="starfield" id="starfield"></div>
-      <div class="ship-container ship-glow">
-        <svg class="ship-svg" viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="140" cy="70" rx="70" ry="30" fill="none" stroke="#99CCFF" stroke-width="1.5" opacity="0.8"/>
-          <ellipse cx="140" cy="70" rx="60" ry="24" fill="#0d1a2d" stroke="#6688CC" stroke-width="1"/>
-          <ellipse cx="140" cy="70" rx="50" ry="18" fill="none" stroke="#334466" stroke-width="0.5"/>
-          <ellipse cx="140" cy="65" rx="12" ry="6" fill="none" stroke="#99CCFF" stroke-width="1"/>
-          <ellipse cx="140" cy="65" rx="6" ry="3" fill="#99CCFF" opacity="0.4"/>
-          <path d="M135 95 L130 130 L150 130 L145 95" fill="#0d1a2d" stroke="#6688CC" stroke-width="1"/>
-          <ellipse cx="140" cy="140" rx="25" ry="14" fill="#0d1a2d" stroke="#6688CC" stroke-width="1"/>
-          <ellipse cx="140" cy="150" rx="8" ry="5" fill="#336699" stroke="#99CCFF" stroke-width="0.5">
-            <animate attributeName="opacity" values="0.4;0.9;0.4" dur="3s" repeatCount="indefinite"/>
-          </ellipse>
-          <line x1="125" y1="130" x2="70" y2="145" stroke="#6688CC" stroke-width="2"/>
-          <line x1="155" y1="130" x2="210" y2="145" stroke="#6688CC" stroke-width="2"/>
-          <rect x="45" y="140" width="50" height="10" rx="5" fill="#0d1a2d" stroke="#6688CC" stroke-width="1"/>
-          <rect x="185" y="140" width="50" height="10" rx="5" fill="#0d1a2d" stroke="#6688CC" stroke-width="1"/>
-          <circle cx="50" cy="145" r="4" fill="#CC4444" opacity="0.8">
-            <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
-          </circle>
-          <circle cx="230" cy="145" r="4" fill="#CC4444" opacity="0.8">
-            <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite" begin="0.3s"/>
-          </circle>
-          <rect x="55" y="142" width="35" height="6" rx="3" fill="#6688CC" opacity="0.5">
-            <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite"/>
-          </rect>
-          <rect x="195" y="142" width="35" height="6" rx="3" fill="#6688CC" opacity="0.5">
-            <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite" begin="0.5s"/>
-          </rect>
-          <text x="140" y="75" text-anchor="middle" fill="#99CCFF" font-family="Orbitron, sans-serif" font-size="6" letter-spacing="2" opacity="0.7">NCC-2026</text>
-        </svg>
-      </div>
       <div class="viewscreen-stats">
         <div class="viewscreen-stat">CREW: <span x-text="stats.agentsTotal + ' ABOARD / ' + stats.agentsActive + ' ON DUTY'"></span></div>
         <div class="viewscreen-stat">MISSIONS: <span x-text="stats.inProgress + ' ACTIVE'"></span></div>
         <div class="viewscreen-stat">COMPLETED: <span x-text="stats.done"></span></div>
-        <div class="viewscreen-stat" x-show="stats.blocked > 0" style="color: var(--lcars-red)">⚠ ALERTS: <span x-text="stats.blocked"></span></div>
+        <div class="viewscreen-stat" x-show="stats.blocked > 0" style="color: var(--lcars-red)">ALERTS: <span x-text="stats.blocked"></span></div>
       </div>
     </div>
 
@@ -826,9 +747,8 @@ function lcarsApp() {
     init() {
       this.updateStardate();
       setInterval(() => this.updateStardate(), 60000);
-      createStarfield();
+      this.viewscreen = initViewscreen(this.stats, this.hasAlerts);
       this.lastSync = new Date().toLocaleTimeString();
-      // Auto-refresh every 60 seconds
       this.refreshInterval = setInterval(() => this.refreshData(), 60000);
     },
 
@@ -866,6 +786,7 @@ function lcarsApp() {
     toggleRedAlert() {
       this.redAlertManual = !this.redAlertManual;
       this.hasAlerts = this.redAlertManual || this.blockedIssues.length > 0;
+      if (this.viewscreen) this.viewscreen.update(this.stats, this.hasAlerts);
     },
 
     async refreshData() {
@@ -882,6 +803,7 @@ function lcarsApp() {
         this.blockedIssues = data.blockedIssues;
         this.recentIssues = data.recentIssues;
         this.hasAlerts = this.redAlertManual || data.blockedIssues.length > 0;
+        if (this.viewscreen) this.viewscreen.update(this.stats, this.hasAlerts);
         this.lastSync = new Date().toLocaleTimeString();
         this.refreshStatus = 'SYNC OK';
         setTimeout(() => { this.refreshStatus = ''; }, 3000);
@@ -893,34 +815,259 @@ function lcarsApp() {
   };
 }
 
-function createStarfield() {
-  const sf = document.getElementById('starfield');
-  for (let i = 0; i < 120; i++) {
-    const star = document.createElement('div');
-    star.className = 'star';
-    const size = Math.random() * 2.5 + 0.5;
-    star.style.cssText = `
-      width: ${size}px; height: ${size}px;
-      top: ${Math.random() * 100}%;
-      left: ${Math.random() * 100}%;
-      --dur: ${Math.random() * 3 + 1.5}s;
-      animation-delay: ${Math.random() * 3}s;
-    `;
-    sf.appendChild(star);
+function initViewscreen(stats, hasAlerts) {
+  const container = document.getElementById('viewscreen-container');
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0a1a, 0.0008);
+
+  const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 2000);
+  camera.position.set(0, 30, 120);
+  camera.lookAt(0, 0, -50);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x0a0a1a);
+  container.insertBefore(renderer.domElement, container.firstChild);
+
+  // --- Starfield ---
+  const starCount = 2000;
+  const starGeo = new THREE.BufferGeometry();
+  const starPos = new Float32Array(starCount * 3);
+  const starSizes = new Float32Array(starCount);
+  for (let i = 0; i < starCount; i++) {
+    starPos[i * 3] = (Math.random() - 0.5) * 600;
+    starPos[i * 3 + 1] = (Math.random() - 0.5) * 400;
+    starPos[i * 3 + 2] = -Math.random() * 1500;
+    starSizes[i] = Math.random() * 2 + 0.5;
   }
-  for (let i = 0; i < 15; i++) {
-    const streak = document.createElement('div');
-    streak.className = 'warp-streak';
-    const w = Math.random() * 80 + 40;
-    streak.style.cssText = `
-      width: ${w}px;
-      top: ${Math.random() * 100}%;
-      left: ${Math.random() * 60 - 10}%;
-      --dur: ${Math.random() * 4 + 3}s;
-      animation-delay: ${Math.random() * 6}s;
-    `;
-    sf.appendChild(streak);
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: true, transparent: true, opacity: 0.8 });
+  const stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
+
+  // --- Lighting ---
+  const ambient = new THREE.AmbientLight(0x334466, 0.6);
+  scene.add(ambient);
+  const keyLight = new THREE.DirectionalLight(0x99ccff, 1.0);
+  keyLight.position.set(50, 80, 100);
+  scene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0x6688cc, 0.4);
+  fillLight.position.set(-30, -20, 50);
+  scene.add(fillLight);
+
+  // --- Ship materials ---
+  const hullMat = new THREE.MeshPhongMaterial({ color: 0x1a2a3d, specular: 0x4466aa, shininess: 60, emissive: 0x0a1020, emissiveIntensity: 0.3 });
+  const trimMat = new THREE.MeshPhongMaterial({ color: 0x6688cc, emissive: 0x334466, emissiveIntensity: 0.5 });
+  const nacelleMat = new THREE.MeshPhongMaterial({ color: 0x6688cc, emissive: 0x3366aa, emissiveIntensity: 0.8, transparent: true, opacity: 0.9 });
+  const engineGlowMat = new THREE.MeshPhongMaterial({ color: 0x99ccff, emissive: 0x99ccff, emissiveIntensity: 1.5, transparent: true, opacity: 0.7 });
+  const deflectorMat = new THREE.MeshPhongMaterial({ color: 0x336699, emissive: 0x4488bb, emissiveIntensity: 1.0, transparent: true, opacity: 0.8 });
+  const runLightMat = new THREE.MeshBasicMaterial({ color: 0xcc4444 });
+
+  const ship = new THREE.Group();
+
+  // Saucer section
+  const saucerGeo = new THREE.CylinderGeometry(22, 22, 3, 32);
+  const saucer = new THREE.Mesh(saucerGeo, hullMat);
+  saucer.rotation.x = 0;
+  saucer.position.set(0, 6, 0);
+  ship.add(saucer);
+
+  // Saucer rim
+  const rimGeo = new THREE.TorusGeometry(22, 0.4, 8, 32);
+  const rim = new THREE.Mesh(rimGeo, trimMat);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.set(0, 6, 0);
+  ship.add(rim);
+
+  // Bridge dome
+  const bridgeGeo = new THREE.SphereGeometry(4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  const bridge = new THREE.Mesh(bridgeGeo, new THREE.MeshPhongMaterial({ color: 0x99ccff, emissive: 0x4466aa, emissiveIntensity: 0.6, transparent: true, opacity: 0.7 }));
+  bridge.position.set(0, 7.5, 0);
+  ship.add(bridge);
+
+  // Engineering hull (neck + body)
+  const neckGeo = new THREE.CylinderGeometry(3, 4, 12, 8);
+  const neck = new THREE.Mesh(neckGeo, hullMat);
+  neck.position.set(0, 0, -12);
+  ship.add(neck);
+
+  const engGeo = new THREE.CylinderGeometry(5, 6, 20, 12);
+  const eng = new THREE.Mesh(engGeo, hullMat);
+  eng.rotation.x = Math.PI / 2;
+  eng.position.set(0, -4, -22);
+  ship.add(eng);
+
+  // Deflector dish
+  const defGeo = new THREE.SphereGeometry(4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  const deflector = new THREE.Mesh(defGeo, deflectorMat);
+  deflector.rotation.x = Math.PI / 2;
+  deflector.position.set(0, -6, -32);
+  ship.add(deflector);
+
+  // Nacelle pylons
+  const pylonGeo = new THREE.BoxGeometry(1, 1, 18);
+  const pylonL = new THREE.Mesh(pylonGeo, trimMat);
+  pylonL.position.set(-18, 0, -18);
+  pylonL.rotation.z = -0.3;
+  ship.add(pylonL);
+  const pylonR = new THREE.Mesh(pylonGeo, trimMat);
+  pylonR.position.set(18, 0, -18);
+  pylonR.rotation.z = 0.3;
+  ship.add(pylonR);
+
+  // Nacelles
+  const nacelleGeo = new THREE.CylinderGeometry(2.5, 2.5, 28, 12);
+  const nacelleL = new THREE.Mesh(nacelleGeo, nacelleMat);
+  nacelleL.rotation.x = Math.PI / 2;
+  nacelleL.position.set(-22, 2, -20);
+  ship.add(nacelleL);
+  const nacelleR = new THREE.Mesh(nacelleGeo, nacelleMat);
+  nacelleR.rotation.x = Math.PI / 2;
+  nacelleR.position.set(22, 2, -20);
+  ship.add(nacelleR);
+
+  // Engine glow caps (rear of nacelles)
+  const glowGeo = new THREE.SphereGeometry(2.8, 12, 8);
+  const glowL = new THREE.Mesh(glowGeo, engineGlowMat.clone());
+  glowL.position.set(-22, 2, -34);
+  ship.add(glowL);
+  const glowR = new THREE.Mesh(glowGeo, engineGlowMat.clone());
+  glowR.position.set(22, 2, -34);
+  ship.add(glowR);
+
+  // Bussard collectors (front of nacelles)
+  const bussardMat = new THREE.MeshBasicMaterial({ color: 0xcc4444, transparent: true, opacity: 0.8 });
+  const bussardGeo = new THREE.SphereGeometry(2.6, 12, 8);
+  const bussardL = new THREE.Mesh(bussardGeo, bussardMat.clone());
+  bussardL.position.set(-22, 2, -6);
+  ship.add(bussardL);
+  const bussardR = new THREE.Mesh(bussardGeo, bussardMat.clone());
+  bussardR.position.set(22, 2, -6);
+  ship.add(bussardR);
+
+  // Running lights
+  const rlGeo = new THREE.SphereGeometry(0.6, 8, 8);
+  const rlTop = new THREE.Mesh(rlGeo, runLightMat.clone());
+  rlTop.position.set(0, 8.5, 0);
+  ship.add(rlTop);
+
+  ship.position.set(0, 0, 0);
+  ship.rotation.x = -0.15;
+  scene.add(ship);
+
+  // --- Warp trail particles ---
+  const trailCount = 300;
+  const trailGeo = new THREE.BufferGeometry();
+  const trailPos = new Float32Array(trailCount * 3);
+  for (let i = 0; i < trailCount; i++) {
+    trailPos[i * 3] = (Math.random() - 0.5) * 60;
+    trailPos[i * 3 + 1] = (Math.random() - 0.5) * 40;
+    trailPos[i * 3 + 2] = -35 - Math.random() * 120;
   }
+  trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+  const trailMat = new THREE.PointsMaterial({ color: 0x6688cc, size: 0.8, transparent: true, opacity: 0.5 });
+  const trails = new THREE.Points(trailGeo, trailMat);
+  scene.add(trails);
+
+  // --- State ---
+  let currentStats = { ...stats };
+  let alertMode = hasAlerts;
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+    const dt = clock.getDelta();
+
+    // Move stars toward camera (warp effect)
+    const positions = stars.geometry.attributes.position.array;
+    const speed = 80;
+    for (let i = 0; i < starCount; i++) {
+      positions[i * 3 + 2] += speed * 0.016;
+      if (positions[i * 3 + 2] > 200) {
+        positions[i * 3 + 2] = -1500;
+        positions[i * 3] = (Math.random() - 0.5) * 600;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 400;
+      }
+    }
+    stars.geometry.attributes.position.needsUpdate = true;
+
+    // Move warp trails
+    const tp = trails.geometry.attributes.position.array;
+    for (let i = 0; i < trailCount; i++) {
+      tp[i * 3 + 2] += 150 * 0.016;
+      if (tp[i * 3 + 2] > 10) {
+        tp[i * 3 + 2] = -35 - Math.random() * 120;
+        tp[i * 3] = (Math.random() - 0.5) * 60;
+        tp[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      }
+    }
+    trails.geometry.attributes.position.needsUpdate = true;
+
+    // Ship gentle movement
+    ship.position.y = Math.sin(t * 0.5) * 1.5;
+    ship.rotation.z = Math.sin(t * 0.3) * 0.02;
+
+    // Engine glow based on crew activity
+    const crewRatio = currentStats.agentsTotal > 0 ? currentStats.agentsActive / currentStats.agentsTotal : 0;
+    const glowPulse = 0.6 + Math.sin(t * 3) * 0.3;
+    const baseIntensity = 0.4 + crewRatio * 1.2;
+    glowL.material.emissiveIntensity = baseIntensity * glowPulse;
+    glowR.material.emissiveIntensity = baseIntensity * glowPulse;
+    glowL.material.opacity = 0.4 + crewRatio * 0.5;
+    glowR.material.opacity = 0.4 + crewRatio * 0.5;
+
+    // Bussard collectors pulse with mission count
+    const missionPulse = 0.5 + Math.sin(t * 2) * 0.3;
+    const missionIntensity = Math.min(1, 0.3 + (currentStats.inProgress || 0) * 0.1);
+    bussardL.material.opacity = missionIntensity * missionPulse + 0.2;
+    bussardR.material.opacity = missionIntensity * missionPulse + 0.2;
+
+    // Running light blink
+    rlTop.material.opacity = Math.sin(t * 4) > 0 ? 1 : 0.2;
+
+    // Red alert: tint nacelles and increase fog redness
+    if (alertMode) {
+      const alertPulse = 0.5 + Math.sin(t * 4) * 0.5;
+      nacelleMat.emissive.setHex(0xaa2222);
+      nacelleMat.emissiveIntensity = 0.4 + alertPulse * 0.8;
+      scene.fog.color.setHex(0x1a0808);
+      renderer.setClearColor(0x0a0505);
+      trailMat.color.setHex(0xcc4444);
+    } else {
+      nacelleMat.emissive.setHex(0x3366aa);
+      nacelleMat.emissiveIntensity = 0.8;
+      scene.fog.color.setHex(0x0a0a1a);
+      renderer.setClearColor(0x0a0a1a);
+      trailMat.color.setHex(0x6688cc);
+    }
+
+    // Deflector pulse based on completed missions
+    const doneRatio = Math.min(1, (currentStats.done || 0) / 50);
+    deflector.material.emissiveIntensity = 0.5 + doneRatio * 1.0 + Math.sin(t * 1.5) * 0.3;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  // Resize handler
+  const onResize = () => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  };
+  window.addEventListener('resize', onResize);
+
+  return {
+    update(newStats, newAlerts) {
+      currentStats = { ...newStats };
+      alertMode = newAlerts;
+    }
+  };
 }
 </script>
 </body>
