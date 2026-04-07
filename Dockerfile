@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     libpng-dev \
     libzip-dev \
     oniguruma-dev \
+    sqlite-dev \
     && docker-php-ext-install pdo_mysql pdo_sqlite mbstring zip opcache pcntl
 
 # Install composer
