@@ -566,6 +566,94 @@
     color: var(--lcars-green);
     padding: 8px;
   }
+
+  /* Project Status Panel */
+  .project-status-panel {
+    grid-column: 1 / -1;
+  }
+
+  .project-status-panel .panel-header { border-bottom-color: var(--lcars-periwinkle); }
+  .project-status-panel .panel-dot { background: var(--lcars-periwinkle); }
+
+  .project-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .project-table th {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--lcars-lavender);
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(153, 153, 255, 0.2);
+  }
+
+  .project-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(102, 136, 204, 0.08);
+    vertical-align: middle;
+  }
+
+  .project-table tr:last-child td { border-bottom: none; }
+
+  .project-table tr:hover td {
+    background: rgba(153, 153, 255, 0.05);
+  }
+
+  .proj-status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+  .proj-status-dot.live    { background: var(--lcars-green); box-shadow: 0 0 6px var(--lcars-green); }
+  .proj-status-dot.planned { background: var(--lcars-yellow); }
+  .proj-status-dot.desktop { background: var(--lcars-lavender); }
+
+  .proj-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--lcars-tan);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .proj-url a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--lcars-lightblue);
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    transition: color 0.15s;
+  }
+  .proj-url a:hover { color: var(--lcars-periwinkle); text-decoration: underline; }
+
+  .proj-url-na {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: rgba(153, 204, 255, 0.35);
+    letter-spacing: 0.5px;
+  }
+
+  .proj-status-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .proj-status-badge.live    { background: rgba(68, 204, 68, 0.15); color: var(--lcars-green); }
+  .proj-status-badge.planned { background: rgba(255, 255, 102, 0.1); color: var(--lcars-yellow); }
+  .proj-status-badge.desktop { background: rgba(204, 153, 204, 0.15); color: var(--lcars-lavender); }
 </style>
 </head>
 <body x-data="lcarsApp()" x-init="init()">
@@ -679,6 +767,65 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- GOLEM INC PROJECT STATUS -->
+    <div class="panel project-status-panel">
+      <div class="panel-header">
+        <div class="panel-dot"></div>
+        <div class="panel-title">Golem Inc — Fleet Deployment Status</div>
+      </div>
+      <table class="project-table">
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>URL</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="proj-name">Route Optimiser</td>
+            <td class="proj-url"><a href="https://routes.mplace.co.za" target="_blank" rel="noopener">routes.mplace.co.za</a></td>
+            <td><span class="proj-status-dot live"></span><span class="proj-status-badge live">Live</span></td>
+          </tr>
+          <tr>
+            <td class="proj-name">USS Paperclip Dashboard</td>
+            <td class="proj-url"><a href="https://dashboard.mplace.co.za" target="_blank" rel="noopener">dashboard.mplace.co.za</a></td>
+            <td><span class="proj-status-dot live"></span><span class="proj-status-badge live">Live</span></td>
+          </tr>
+          <tr>
+            <td class="proj-name">Server Monitor</td>
+            <td class="proj-url"><a href="https://monitor.mplace.co.za" target="_blank" rel="noopener">monitor.mplace.co.za</a></td>
+            <td><span class="proj-status-dot live"></span><span class="proj-status-badge live">Live</span></td>
+          </tr>
+          <tr>
+            <td class="proj-name">Vigil</td>
+            <td class="proj-url"><a href="https://vigil.mplace.co.za" target="_blank" rel="noopener">vigil.mplace.co.za</a></td>
+            <td><span class="proj-status-dot live"></span><span class="proj-status-badge live">Live</span></td>
+          </tr>
+          <tr>
+            <td class="proj-name">RivalWatch</td>
+            <td class="proj-url"><a href="https://rivalwatch.mplace.co.za" target="_blank" rel="noopener">rivalwatch.mplace.co.za</a></td>
+            <td><span class="proj-status-dot live"></span><span class="proj-status-badge live">Live</span></td>
+          </tr>
+          <tr>
+            <td class="proj-name">TenderOps</td>
+            <td class="proj-url"><a href="https://tenderops.mplace.co.za" target="_blank" rel="noopener">tenderops.mplace.co.za</a></td>
+            <td><span class="proj-status-dot live"></span><span class="proj-status-badge live">Live</span></td>
+          </tr>
+          <tr>
+            <td class="proj-name">DesktopFactory</td>
+            <td class="proj-url-na">N/A — Desktop Game</td>
+            <td><span class="proj-status-dot desktop"></span><span class="proj-status-badge desktop">Desktop</span></td>
+          </tr>
+          <tr>
+            <td class="proj-name">Sentinel</td>
+            <td class="proj-url-na">N/A</td>
+            <td><span class="proj-status-dot planned"></span><span class="proj-status-badge planned">Planned</span></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- RED ALERTS -->
