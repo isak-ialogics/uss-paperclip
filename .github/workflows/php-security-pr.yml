@@ -1,0 +1,100 @@
+name: PHP security source and image validation
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php-security-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source without persistent credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Capability preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v python3
+          command -v docker
+          command -v openssl
+          docker info >/dev/null
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+        with:
+          php-version: '8.4.27'
+          extensions: pdo_sqlite, pdo_mysql, mbstring, zip, dom, curl
+          tools: composer:v2
+        env:
+          update: true
+
+      - name: Verify installed PHP patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -r 'if (PHP_VERSION_ID !== 80427) { fwrite(STDERR, "Expected PHP 8.4.27\n"); exit(1); } echo "PHP ", PHP_VERSION, " verified\n";'
+
+      - name: Source safety contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_source_security.py' -v
+
+      - name: Locked dependencies and application tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --no-scripts --no-plugins
+          export APP_KEY="base64:$(openssl rand -base64 32)"
+          export APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=:memory: DB_URL=''
+          export CACHE_STORE=array SESSION_DRIVER=array MAIL_MAILER=array QUEUE_CONNECTION=sync
+          export PAPERCLIP_API_URL=https://example.invalid PAPERCLIP_API_KEY=test-only PAPERCLIP_COMPANY_ID=test-only
+          php vendor/bin/phpunit --colors=never
+
+      - name: Build untrusted PR image locally only
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --pull --no-cache --tag uss-paperclip:pr-check .
+
+      - name: Read back actual image CLI FPM extensions and entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=uss-paperclip:pr-check
+          docker image inspect --format '{{.Id}}' "$image"
+          docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev --entrypoint php "$image" -r '
+            require "/var/www/html/docker/php-runtime-guard.php";
+            if (PHP_VERSION_ID !== 80427 || ini_get("session.upload_progress.enabled") !== "0") { exit(1); }
+            foreach (["pdo_mysql", "pdo_sqlite", "mbstring", "zip", "Zend OPcache", "pcntl"] as $extension) {
+              if (!extension_loaded($extension)) { fwrite(STDERR, "Missing extension: ".$extension."\n"); exit(1); }
+            }
+            echo "PHP CLI, extensions and session setting verified\n";'
+          fpm_output=$(docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev --entrypoint php-fpm "$image" -v 2>&1)
+          [[ "$fpm_output" == *"PHP 8.4.27"* ]] || { printf 'FPM version mismatch\n' >&2; exit 1; }
+          startup_output=$(docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev "$image" php -r 'echo "START_OK\n";' 2>&1)
+          [[ "$startup_output" == *START_OK* ]] || { printf 'Container entrypoint did not execute\n' >&2; exit 1; }
+          printf 'FPM and guarded entrypoint verified\n'
+
+      - name: Refuse an unsupported but separately patched PHP minor
+        shell: bash
+        run: |
+          set -euo pipefail
+          negative=php:8.2.35-cli-alpine3.23@sha256:198ed9e076a5c6ad8c17b64c3ff874c276a5e86527a9888f07eee837bc862040
+          set +e
+          refusal=$(docker run --rm --network none --read-only -v "$PWD/docker/php-runtime-guard.php:/guard.php:ro" --entrypoint php "$negative" -r 'require "/guard.php"; echo "REACHED\n";' 2>&1)
+          status=$?
+          set -e
+          [[ "$status" -eq 78 && "$refusal" == *"Unsupported PHP security patch"* && "$refusal" != *REACHED* ]] || { printf 'Guard refusal or image execution failed (status=%s)\n' "$status" >&2; exit 1; }
+          printf 'Unsupported-minor guard refusal verified\n'
