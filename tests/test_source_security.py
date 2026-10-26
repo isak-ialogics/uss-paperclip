@@ -62,8 +62,8 @@ class SourceSecurityTest(unittest.TestCase):
         self.assertTrue(ignore.is_file(), "missing fail-closed build context allowlist")
         lines = [x.strip() for x in ignore.read_text(encoding="utf-8").splitlines() if x.strip() and not x.startswith("#")]
         self.assertEqual(lines[0], "*")
-        self.assertTrue(all(x.startswith("!") and "*" not in x for x in lines[1:]))
-        selected = {x[1:] for x in lines[1:]}
+        self.assertTrue(all("*" not in x for x in lines[1:] if x.startswith("!")))
+        selected = {x[1:] for x in lines[1:] if x.startswith("!")}
         tracked = subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True).splitlines()
         source_roots = ("app/", "bootstrap/", "config/", "database/", "docker/", "public/", "resources/", "routes/")
         required = {p for p in tracked if p in ("artisan", "composer.json", "composer.lock") or (p.startswith(source_roots) and not p.endswith(".gitignore"))}
@@ -78,6 +78,24 @@ class SourceSecurityTest(unittest.TestCase):
         dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
         self.assertLess(dockerfile.index("RUN mkdir -p storage/"), dockerfile.index("RUN composer install"))
         self.assertIn("bootstrap/cache", dockerfile)
+
+    def test_docker_context_reopens_only_required_directories_with_child_denies(self):
+        # An unpaired !directory/ also includes every unlisted descendant in Docker.
+        tracked = subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True).splitlines()
+        source_roots = ("app/", "bootstrap/", "config/", "database/", "docker/", "public/", "resources/", "routes/")
+        required = {p for p in tracked if p in ("artisan", "composer.json", "composer.lock") or (p.startswith(source_roots) and not p.endswith(".gitignore"))}
+        required.update({"docker/php-runtime-guard.php", "docker/php-entrypoint.sh", "docker/php-security.ini"})
+        directories = set()
+        for path in required:
+            parts = path.split("/")
+            directories.update("/".join(parts[:n]) for n in range(1, len(parts)))
+        expected = ["*"]
+        for directory in sorted(directories, key=lambda p: (p.count("/"), p)):
+            expected.extend((f"!{directory}/", f"{directory}/*"))
+        expected.extend(f"!{path}" for path in sorted(required))
+        ignore = ROOT / ".dockerignore"
+        lines = [x.strip() for x in ignore.read_text(encoding="utf-8").splitlines() if x.strip() and not x.startswith("#")]
+        self.assertEqual(lines, expected, "only reviewed leaves may be included after each directory's child deny")
 
     def test_native_session_upload_progress_is_disabled_in_php_ini(self):
         ini = ROOT / "docker/php-security.ini"
