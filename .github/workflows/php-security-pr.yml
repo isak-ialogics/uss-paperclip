@@ -50,6 +50,12 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_source_security.py' -v
 
+      - name: Locked production dependency security audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          composer audit --locked --no-interaction
+
       - name: Locked dependencies and application tests
         shell: bash
         run: |

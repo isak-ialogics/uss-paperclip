@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 
@@ -56,6 +57,44 @@ class SourceSecurityTest(unittest.TestCase):
         guard = steps[setup_index + 1]
         self.assertIn("PHP_VERSION_ID !== 80427", guard)
         self.assertNotIn("if:", guard)
+
+    def test_pr_workflow_requires_a_failing_closed_locked_audit_before_install(self):
+        workflow = (ROOT / ".github/workflows/php-security-pr.yml").read_text(encoding="utf-8")
+        steps = re.split(r"(?m)^      - name: ", workflow)[1:]
+        names = [step.partition("\n")[0] for step in steps]
+        audit_name = "Locked production dependency security audit"
+        self.assertIn(audit_name, names)
+        audit_index = names.index(audit_name)
+        self.assertLess(audit_index, names.index("Locked dependencies and application tests"))
+        self.assertLess(audit_index, names.index("Build untrusted PR image locally only"))
+        step = steps[audit_index]
+        self.assertIn("        shell: bash\n", step)
+        self.assertNotRegex(step, r"(?m)^        (?:if:|continue-on-error:)")
+        self.assertIn("        run: |\n", step)
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1]).strip() + "\n"
+        self.assertEqual(script.splitlines()[0], "set -euo pipefail")
+        self.assertEqual(script.splitlines()[1:], ["composer audit --locked --no-interaction"])
+
+        for mode, expected_status in (("success", 0), ("advisories", 37), ("deceptive", 23)):
+            with self.subTest(mode=mode):
+                control = """composer() {
+                    [[ "$*" == 'audit --locked --no-interaction' ]] || return 44
+                    case "$AUDIT_CASE" in
+                        success) printf 'No security vulnerability advisories found.\\n'; return 0 ;;
+                        advisories) printf 'Found advisories.\\n'; return 37 ;;
+                        deceptive) printf 'No security vulnerability advisories found.\\n'; return 23 ;;
+                    esac
+                    return 45
+                }
+                """
+                env = os.environ.copy()
+                env["AUDIT_CASE"] = mode
+                result = subprocess.run(
+                    [shutil.which("bash") or "bash", "-c", control + script + "\nprintf 'DOWNSTREAM_REACHED\\n'\n"],
+                    cwd=ROOT, env=env, capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(result.returncode, expected_status, result.stderr)
+                self.assertEqual("DOWNSTREAM_REACHED" in result.stdout, mode == "success")
 
     def test_docker_context_allowlists_only_application_source_and_creates_writable_dirs(self):
         ignore = ROOT / ".dockerignore"
@@ -124,6 +163,41 @@ class SourceSecurityTest(unittest.TestCase):
         self.assertEqual(manifest["config"]["platform"]["php"], "8.4.27")
         self.assertEqual(lock["platform"]["php"], constraint)
         self.assertEqual(lock["platform-overrides"]["php"], "8.4.27")
+
+    def test_laravel_security_floor_and_locked_patch(self):
+        manifest = json.loads((ROOT / "composer.json").read_text(encoding="utf-8"))
+        lock = json.loads((ROOT / "composer.lock").read_text(encoding="utf-8"))
+        packages = {package["name"]: package for package in lock["packages"]}
+        self.assertEqual(manifest["require"]["laravel/framework"], "^13.30.0")
+        self.assertEqual(packages["laravel/framework"]["version"].lstrip("v"), "13.30.0")
+
+    def test_guzzle_locked_security_patches_and_required_promises(self):
+        lock = json.loads((ROOT / "composer.lock").read_text(encoding="utf-8"))
+        packages = {package["name"]: package for package in lock["packages"]}
+        self.assertEqual(packages["guzzlehttp/guzzle"]["version"], "7.15.2")
+        self.assertEqual(packages["guzzlehttp/psr7"]["version"], "2.13.0")
+        self.assertEqual(packages["guzzlehttp/promises"]["version"], "2.5.1")
+
+    def test_league_locked_security_patches(self):
+        lock = json.loads((ROOT / "composer.lock").read_text(encoding="utf-8"))
+        packages = {package["name"]: package for package in lock["packages"]}
+        self.assertEqual(packages["league/commonmark"]["version"], "2.10.2")
+        self.assertEqual(packages["league/flysystem"]["version"], "3.35.3")
+
+    def test_symfony_locked_security_patches(self):
+        lock = json.loads((ROOT / "composer.lock").read_text(encoding="utf-8"))
+        packages = {package["name"]: package for package in lock["packages"]}
+        expected = {
+            "symfony/http-foundation": "8.1.9",
+            "symfony/http-kernel": "8.0.12",
+            "symfony/mailer": "8.0.12",
+            "symfony/mime": "8.0.12",
+            "symfony/polyfill-intl-idn": "1.38.1",
+            "symfony/routing": "8.0.13",
+        }
+        for name, version in expected.items():
+            with self.subTest(package=name):
+                self.assertEqual(packages[name]["version"].lstrip("v"), version)
 
     def test_container_startup_checks_php_before_running_command(self):
         dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
